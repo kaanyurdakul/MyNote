@@ -5,7 +5,7 @@ using System.Web.Http;
 
 namespace MyNote.API.Controllers
 {
-    public class BaseApiController : ApiController, IDisposable    
+    public class BaseApiController : ApiController    
     {
         public ApplicationDbContext db { get; set; }
         public BaseApiController()
@@ -14,9 +14,6 @@ namespace MyNote.API.Controllers
         }
 
 
-        public void Dispose()
-        {
-            db.Dispose();
-        }
+ 
     }
 }
