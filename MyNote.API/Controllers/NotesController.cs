@@ -42,7 +42,7 @@ namespace MyNote.API.Controllers
                 return NotFound();
             }
 
-            return Ok(note);
+            return Ok(note.ToNoteDto());
         }
 
         [HttpPost]
@@ -93,7 +93,7 @@ namespace MyNote.API.Controllers
         [HttpPut]
         public IHttpActionResult Update(int? id, UpdateNoteDto dto)
         {
-            if(id == null || id != dto.Id)
+            if (id == null || dto == null || id != dto.Id)
             {
                 return BadRequest();
             }
@@ -114,7 +114,7 @@ namespace MyNote.API.Controllers
                 return Ok(note.ToNoteDto());
             }
 
-            return Ok(note);
+            return BadRequest(ModelState);
         }
 
 

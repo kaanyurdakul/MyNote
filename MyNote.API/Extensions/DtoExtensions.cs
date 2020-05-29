@@ -15,7 +15,7 @@ namespace MyNote.API.Extensions
             return new NoteDto
             {
                 Id = note.Id,
-                Title = note.Content,
+                Title = note.Title,
                 Content = note.Content,
                 CreationTime = note.CreationTime,
                 ModificationTime = note.ModificationTime
