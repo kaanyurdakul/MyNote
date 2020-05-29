@@ -3,6 +3,20 @@
     padding-bottom: 20px;
 }
 
+.page {
+    display:none;
+    height: 100%
+}
+
+.message{
+    display: none;
+}
+
+message ul{
+    margin-bottom: 0;
+    padding-left: 1rem;
+}
+
 /* Set padding to keep content from hitting the edges */
 .body-content {
     padding-left: 15px;

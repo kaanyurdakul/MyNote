@@ -1,13 +1,19 @@
 ﻿body {
+    padding-top: 56px;
 }
 
-
-.message ul{
-    margin-bottom: 0;
-}
-
-.message{
+.page {
     display: none;
+    height: 100%;
+}
+
+.message {
+    display: none;
+}
+
+.message ul {
+    margin-bottom: 0;
+    padding-left: 1rem;
 }
 
 .loading {
@@ -16,10 +22,11 @@
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, .5);
+    /*background-color: rgba(0, 0, 0, .5);*/
     display: flex;
+    z-index: 999;
 }
 
-    .loading > div {
-        margin: auto;
-    }
+.loading > div {
+    margin: auto;
+}
