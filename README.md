@@ -1,3 +1,3 @@
 # MyNote
 
-[Go to documentation website](https://github.com/kaanyurdakul/note)
+[Go to documentation website](https://kaanyurdakul.github.io/note/)
