@@ -1,305 +1,200 @@
-﻿// GLOBALS
-var apiUrl = "https://localhost:44350/";
-var selectedNote = null;
-var selectedLink = null;
+﻿// AngularJs Version
+var apiUrl = "https://kaanyurdakul.tk/api/";
+var app = angular.module("myApp", ["ngRoute"]);
 
-// FUNCTIONS
-function checkLogin() {
-    var loginData = getLoginData();
+app.directive("messages", function () {
+    return {
+        templateUrl: "directives/messages.html"
+    };
+});
 
-    if (!loginData || !loginData.access_token) {
-        showLoginPage();
-        return;
-    }
+app.config(function ($routeProvider) {
+    $routeProvider
+        .when("/", { templateUrl: "pages/app.html", controller: "appController" })
+        .when("/login", { templateUrl: "pages/login.html", controller: "loginController" });
+});
 
-    // is token valid?
-    ajax("api/Account/UserInfo", "GET", null,
-        function (data) {
-            showAppPage();
-        },
-        function () {
-            showLoginPage();
-        });
-}
+app.controller("mainController", function ($scope, $http) {
 
-function showAppPage() {
-    $(".only-logged-out").hide();
-    $(".only-logged-in").show();
-    $(".page").hide();
+    $scope.isLoading = false;
 
-    // retrieve the notes
-    ajax("api/Notes/", "GET", null,
-        function (data) {
+    $scope.showLoading = function () {
+        $scope.isLoading = true;
+    };
+    $scope.hideLoading = function () {
+        $scope.isLoading = false;
+    };
 
-            $("#notes").html("");
-            for (var i = 0; i < data.length; i++) {
-                addMenuLink(data[i]);
-            }
+    $scope.loginData = function () {
+        var loginDataJson = localStorage["login"] | sessionStorage["login"];
 
-            // show page when it's ready
-            $("#page-app").show();
-        },
-        function () {
-
-        });
-}
-
-function addMenuLink(note, isActive = false) {
-    var a = $("<a/>")
-        .attr("href", "#")
-        .addClass("list-group-item list-group-item-action show-note")
-        .text(note.Title)
-        .prop("note", note);
-
-    if (isActive) {
-        $(".show-note").removeClass("active");
-        a.addClass("active");
-        selectedLink = a.get(0);
-        selectedNote = note;
-    }
-
-    $("#notes").prepend(a);
-}
-
-function showLoginPage() {
-    $(".only-logged-in").hide();
-    $(".only-logged-out").show();
-    $(".page").hide();
-    $("#page-login").show();
-}
-
-function getAuthHeader() {
-    return { Authorization: "Bearer " + getLoginData().access_token };
-}
-
-function ajax(url, type, data, successFunc, errorFunc) {
-    $.ajax({
-        url: apiUrl + url,
-        type: type,
-        data: data,
-        headers: getAuthHeader(),
-        success: successFunc,
-        error: errorFunc
-    });
-}
-
-function addNote() {
-    ajax("api/Notes/", "POST",
-        { Title: $("#title").val(), Content: $("#content").val() },
-        function (data) {
-            addMenuLink(data, true);
-        },
-        function () {
-
+        if (!loginDataJson) {
+            return null;
         }
-    );
-}
 
-function updateNote() {
-    ajax("api/Notes/" + selectedNote.Id, "PUT",
-        { Id: selectedNote.Id, Title: $("#title").val(), Content: $("#content").val() },
-        function (data) {
-            selectedLink.note = data;
-            selectedLink.textContent = data.Title;
-        },
-        function () {
-
-        }
-    );
-}
-
-function getLoginData() {
-    var json = sessionStorage["login"] || localStorage["login"];
-
-    if (json) {
         try {
-            return JSON.parse(json);
+            return JSON.parse(loginDataJson);
         } catch (e) {
             return null;
         }
-    }
-    return null;
-}
+    };
 
-function success(message) {
-    $(".tab-pane.active .message")
-        .removeClass("alert-danger")
-        .addClass("alert-success")
-        .text(message)
-        .show();
-}
+    $scope.token = function () {
+        var loginData = $scope.loginData();
 
-function error(modelState) {
-    if (modelState) {
-        var errors = [];
-        for (var prop in modelState) {
-            for (var i = 0; i < modelState[prop].length; i++) {
-                errors.push(modelState[prop][i]);
+        if (!loginData) {
+            return null;
+        }
+
+        return loginData.access_token;
+    };
+
+    $scope.ajax = function (apiUri, method, data, isAuth, successFunc, errorFunc) {
+        $scope.showLoading();
+        var headers = null;
+
+        if (isAuth)
+            headers = { Authorization: "Bearer " + $scope.token() };
+
+        $http({
+            url: apiUrl + apiUri,
+            method: method,
+            headers: headers,
+            data: data
+        }).then(
+            function (response) {
+                successFunc(response);
+                $scope.hideLoading();
+            },
+            function (response) {
+                errorFunc(response);
+                $scope.hideLoading();
+            }
+        );
+    };
+
+
+    $scope.checkAuth = function () {
+        var tokenJson = localStorage["token"] | sessionStorage["token"];
+
+        if (!tokenJson) {
+            // display login/register view
+            console.log("giriş yapılmamış..");
+            return;
+        }
+
+        // check if token is valid
+
+        // display app view
+    };
+
+
+    $scope.checkAuth();
+});
+
+app.controller("loginController", function ($scope, $http) {
+
+    $scope.currentTab = "login"; // login | register
+    $scope.messageFor = "login"; // login | register
+    $scope.messageType = "info"; // success | warning | danger | info
+    $scope.messages = []; // string array ["message 1", "message 2"]
+
+    $scope.registerForm = {
+        Email: "",
+        Password: "",
+        ConfirmPassword: ""
+    };
+
+    $scope.loginForm = {
+        grant_type: "password",
+        username: "",
+        password: ""
+    };
+
+    $scope.rememberMe = false;
+
+    $scope.error = function (data) {
+        $scope.messageFor = $scope.currentTab;
+        $scope.messageType = "danger";
+        $scope.messages = [];
+        if (data.ModelState) {
+            for (var prop in data.ModelState) {
+                for (var index in data.ModelState[prop]) {
+                    $scope.messages.push(data.ModelState[prop][index]);
+                }
             }
         }
+    };
 
-        var ul = $("<ul/>");
-        for (var i = 0; i < errors.length; i++) {
-            ul.append($("<li/>").text(errors[i]));
-        }
-        $(".tab-pane.active .message")
-            .removeClass("alert-success")
-            .addClass("alert-danger")
-            .html(ul)
-            .show();
-    }
-}
+    $scope.success = function (message) {
+        $scope.messageFor = $scope.currentTab;
+        $scope.messageType = "success";
+        $scope.messages = [message];
+    };
 
-function errorMessage(message) {
-    if (message) {
-        $(".tab-pane.active .message")
-            .removeClass("alert-success")
-            .addClass("alert-danger")
-            .text(message)
-            .show();
-    }
-}
+    $scope.resetRegisterForm = function () {
+        $scope.registerForm.Email = "";
+        $scope.registerForm.Password = "";
+        $scope.registerForm.ConfirmPassword = "";
+    };
 
-function resetLoginForms() {
-    $(".message").hide();
-    $("#login form").each(function () {
-        this.reset();
-    });
-}
+    $scope.resetLoginForm = function () {
+        $scope.loginForm.username = "";
+        $scope.loginForm.password = "";
+        $scope.rememberMe = false;
+    };
 
-function resetNoteForm() {
-    selectedLink = null;
-    selectedNote = null;
-    $(".show-note").removeClass("active");
-    $("#title").val("");
-    $("#content").val("");
-}
-
-// EVENTS
-$(document).ajaxStart(function () {
-    $(".loading").removeClass("d-none");
-});
-
-$(document).ajaxStop(function () {
-    $(".loading").addClass("d-none");
-});
-
-// register
-$("#signupform").submit(function (event) {
-    event.preventDefault();
-    var formData = $(this).serialize();
-
-    $.post(apiUrl + "api/Account/Register", formData, function (data) {
-        resetLoginForms();
-        success("Your account has been successfully created.");
-    }).fail(function (xhr) {
-        error(xhr.responseJSON.ModelState);
+    $scope.$watch("currentTab", function () {
+        $scope.resetLoginForm();
+        $scope.resetRegisterForm();
+        $scope.messages = [];
     });
 
+    $scope.registerSubmit = function () {
+
+        $scope.ajax("api/Account/Register", "post", $scope.registerForm, false,
+            function (response) {
+                $scope.resetRegisterForm();
+                $scope.success("Your account has been successfully created.")
+            },
+            function (response) {
+                $scope.error(response.data);
+            }
+        );
+
+    };
+
+    $scope.loginSubmit = function () {
+        alert("login submit");
+    };
 });
 
-// login
-$("#signinform").submit(function (event) {
-    event.preventDefault();
-    var formData = $(this).serialize();
+app.controller("appController", function ($scope, $location) {
+    $location.path("/login"); // sonra sil
+});
 
-    $.post(apiUrl + "Token", formData, function (data) {
-
-        var datastr = JSON.stringify(data);
-        if ($("#signinrememberme").prop("checked")) {
-            sessionStorage.removeItem("login");
-            localStorage["login"] = datastr;
-        } else {
-            localStorage.removeItem("login");
-            sessionStorage["login"] = datastr;
-        }
-
-        resetLoginForms();
-        success("You have been logged in successfully. Redirecting..");
-
-        setTimeout(function () {
-            resetLoginForms();
-            showAppPage();
-        }, 1000);
-
-    }).fail(function (xhr) {
-        errorMessage(xhr.responseJSON.error_description);
+// JQuery Document Ready
+$(function () {
+    $(".navbar-login a").click(function (event) {
+        event.preventDefault();
+        var href = $(this).attr("href");
+        // https://getbootstrap.com/docs/4.0/components/navs/#via-javascript
+        $('#pills-tab a[href="' + href + '"]').tab('show'); // Select tab by name
     });
 
+    $('body').on('click', '#pills-tab a', function (e) {
+        e.preventDefault()
+        $(this).tab('show')
+    });
+
+    // https://stackoverflow.com/questions/37769900/how-to-change-a-scope-variable-outside-the-controller-in-angularjs
+    // https://www.hiren.dev/2014/06/how-to-access-scope-variable-outside.html
+    // https://getbootstrap.com/docs/4.0/components/navs/#events
+    $('body').on('shown.bs.tab', 'a[data-toggle="pill"]', function (e) {
+        var $scope = angular.element($('[ng-view]')[0]).scope();
+        $scope.currentTab = $(e.target).attr("id") == "pills-signup-tab" ? "register" : "login";
+        $scope.$apply();
+        //e.target // newly activated tab
+        //e.relatedTarget // previous active tab
+    })
 });
-
-// https://getbootstrap.com/docs/4.0/components/navs/#events
-$('#login a[data-toggle="pill"]').on('shown.bs.tab', function (e) {
-    // e.target // newly activated tab
-    // e.relatedTarget // previous active tab
-
-    resetLoginForms();
-});
-
-$(".navbar-login a").click(function (event) {
-    event.preventDefault();
-    var href = $(this).attr("href");
-    // https://getbootstrap.com/docs/4.0/components/navs/#via-javascript
-    $('#pills-tab a[href="' + href + '"]').tab('show'); // Select tab by name
-});
-
-// logout
-$("#btnLogout").click(function (event) {
-    event.preventDefault();
-    resetNoteForm();
-    sessionStorage.removeItem("login");
-    localStorage.removeItem("login");
-    showLoginPage();
-});
-
-// clear selection and form
-$(".add-new-note").click(function () {
-    resetNoteForm();
-});
-
-$("body").on("click", ".show-note", function (event) {
-    event.preventDefault();
-    selectedLink = this;
-    selectedNote = this.note;
-    $("#title").val(selectedNote.Title);
-    $("#content").val(selectedNote.Content);
-
-    $(".show-note").removeClass("active");
-    $(this).addClass("active");
-});
-
-$("#frmNote").submit(function (event) {
-    event.preventDefault();
-
-    if (selectedNote) {
-        updateNote();
-    }
-    else {
-        addNote();
-    }
-});
-
-// delete note
-$("#btnDelete").click(function () {
-    if (selectedNote) {
-        if (confirm("Are you sure to delete the selected note?")) {
-            ajax("api/Notes/" + selectedNote.Id, "DELETE", null,
-                function (data) {
-                    $(selectedLink).remove();
-                    resetNoteForm();
-                },
-                function () {
-
-                }
-            );
-        }
-    }
-    else {
-        if (confirm("Are you sure to delete the draft?")) {
-            resetNoteForm();
-        }
-    }
-});
-
-// ACTIONS
-checkLogin();
